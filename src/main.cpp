@@ -19,7 +19,7 @@ void initialize_radio()
   delay(100); //wait for the RN2xx3's startup message
   Serial2.flush();
 
-  /*//check communication with radio
+  //check communication with radio
   String hweui = lora.hweui();
   while(hweui.length() != 16)
   {
@@ -40,18 +40,18 @@ void initialize_radio()
   bool join_result = false;
 
   //ABP: initABP(String addr, String AppSKey, String NwkSKey);
-  join_result = lora.initABP("02017201", "8D7FFEF938589D95AAD928C2E2E7E48F", "AE17E567AECC8787F749A62F5541D522");
+  //join_result = lora.initABP("02017201", "8D7FFEF938589D95AAD928C2E2E7E48F", "AE17E567AECC8787F749A62F5541D522");
 
   //OTAA: initOTAA(String AppEUI, String AppKey);
-  //join_result = lora.initOTAA("70B3D57ED00001A6", "A23C96EE13804963F8C2BD6285448198");
+  join_result = lora.initOTAA("1212121212121212", "2F9EF33BA76C4CD38E6BD57E883DD413");
 
   while(!join_result)
   {
     Serial.println("Unable to join. Are your keys correct, and do you have TTN coverage?");
     delay(60000); //delay a minute before retry
-    join_result = lora.init();
+    join_result = lora.initOTAA();
   }
-  Serial.println("Successfully joined TTN");*/
+  Serial.println("Successfully joined TTN");
 
 }
 
