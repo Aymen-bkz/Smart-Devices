@@ -61,17 +61,24 @@ void setup() {
   Serial.begin(9600);
   Serial2.begin(57600, SERIAL_8N1, RXD2, TXD2);
   initialize_radio();
+  Serial.println(Serial2.readStringUntil('\n'));
+  Serial2.print("radio set pwr 14\r\n");
+  Serial.println(Serial2.readStringUntil('\n'));
+  Serial2.print("mac pause\r\n");
+  Serial.println(Serial2.readStringUntil('\n'));
   
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(Serial2.available()){
-    Serial.println(Serial2.readStringUntil('\n'));
-  }
-  Serial2.print("radio tx 48656c6c6f");
-  if(Serial2.available()){
-    Serial.println(Serial2.readStringUntil('\n'));
+
+  Serial2.print("radio tx 48656c6c6f\r\n");
+  Serial.println(Serial2.readStringUntil('\n'));
+  if (Serial.available()) {                        // if data is available on hardware serial port ==> data is coming from PC or notebook
+       //SoftSerial.print("$PMTK104*37\r\n");              // write it to the SoftSerial shield*/
+       String Command = Serial.readStringUntil('\n');
+       Serial.println(Command);
+       Serial2.print(Command + "\r\n");
   }
   delay(1000);
 }
