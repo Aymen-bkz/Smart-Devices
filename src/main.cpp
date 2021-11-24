@@ -60,12 +60,18 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   Serial2.begin(57600, SERIAL_8N1, RXD2, TXD2);
-  
   initialize_radio();
-
+  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.println(lora.getRx());
+  if(Serial2.available()){
+    Serial.println(Serial2.readStringUntil('\n'));
+  }
+  Serial2.print("radio tx 48656c6c6f");
+  if(Serial2.available()){
+    Serial.println(Serial2.readStringUntil('\n'));
+  }
+  delay(1000);
 }
