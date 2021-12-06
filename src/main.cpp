@@ -5,8 +5,12 @@
 #define RXD2 18
 #define TXD2 19
 #define RESET 21
+#define gas_pin 2
 
 rn2xx3 lora(Serial2);
+uint32_t humidity = 7625;//à diviser par 100
+uint32_t temperature = 3215;//à diviser par 100
+byte payload[4];
 
 void initialize_radio()
 {
@@ -67,18 +71,32 @@ void setup() {
   Serial2.print("mac pause\r\n");
   Serial.println(Serial2.readStringUntil('\n'));
   
+  payload[0]=highByte(humidity);
+  payload[1]=lowByte(humidity);
+  payload[2]=highByte(temperature);
+  payload[3]=lowByte(temperature);
+  // Send it off
+  
+  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
-  Serial2.print("radio tx 48656c6c6f\r\n");
-  Serial.println(Serial2.readStringUntil('\n'));
-  if (Serial.available()) {                        // if data is available on hardware serial port ==> data is coming from PC or notebook
-       //SoftSerial.print("$PMTK104*37\r\n");              // write it to the SoftSerial shield*/
+  
+  //Serial2.print("radio tx 48656c6c6f\r\n");
+ // Serial.println(Serial2.readStringUntil('\n'));
+ /* if (Serial.available()) {                        // if data is available on hardware serial port ==> data is coming from PC or notebook
+       //SoftSerial.print("$PMTK104*37\r\n");              // write it to the SoftSerial shield
        String Command = Serial.readStringUntil('\n');
        Serial.println(Command);
        Serial2.print(Command + "\r\n");
   }
   delay(1000);
+  lora.txBytes(payload,4); 
+  */ 
+  float sensorvalue;
+  sensorvalue = analogRead(gas_pin);
+  Serial.print("sensor_value = ");
+  Serial.println(sensorvalue);
+  delay(300);
 }
