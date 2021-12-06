@@ -1,24 +1,63 @@
 #include <Arduino.h>
 #include "rn2xx3.h"
 
-#define RESET 21
-#define RXD2 18
-#define TXD2 19
+#define RST 21
+#define RX 18
+#define TX 19
+#define INTERRUPT_PIN 12
+
+#define SIG 2
+#define Buzz_pin 17
+#define R_Poly_CMD 16
+#define ADC_SENS 33
+#define ADC_R_Alu 27
+
+
 
 
  // RX, TX !! labels on relay board is swapped !!
 rn2xx3 myLora(Serial2);
-uint32_t humidity = 7625;//à diviser par 100
-uint32_t temperature = 3215;//à diviser par 100
-byte payload[4];
+byte payload[2];
+
+float R0=0.45;
+
+float sensor_volt;
+float RS_gas; // Get value of RS in a GAS
+float ratio; // Get ratio RS_GAS/RS_air
+
+ int duty_cyle;
+  int t_1 = 0;
+  int t_2 = 0;
+  int delta_t=t_2 - t_1;
+  double Kp=0.8, Ki=10, Kd=0.1;
+  float e_t = 0;
+  float e_t_1 = 0;
+
+uint32_t groove_data;
+uint32_t aime_data;
+
+int R1;
+int R2;
+int R3;
+int R5;
+int Vcc;
+int R6;
+
+ // the number of the LED pin
+const uint32_t ledPin = 16;  // 16 corresponds to GPIO16
+
+// setting PWM properties
+const uint32_t freq = 20000;
+const uint32_t ledChannel = 0;
+const uint32_t resolution = 8;
 
 void initialize_radio()
 {
-  //reset RN2xx3
-  pinMode(RESET, OUTPUT);
-  digitalWrite(RESET, LOW);
+  //RST RN2xx3
+  pinMode(RST, OUTPUT);
+  digitalWrite(RST, LOW);
   delay(100);
-  digitalWrite(RESET, HIGH);
+  digitalWrite(RST, HIGH);
 
   delay(100); //wait for the RN2xx3's startup message
   Serial2.flush();
@@ -61,57 +100,111 @@ void initialize_radio()
   
 }
 
+void manage_interrupt(){
+
+}
+
 
 void setup() {
     // Note the format for setting a serial port is as follows: Serial2.begin(baud-rate, protocol, RX pin, TX pin);
   Serial.begin(9600);
   // Open serial communications and wait for port to open:
-
-  Serial2.begin(57600, SERIAL_8N1, RXD2, TXD2);
+  config_PWM();
+  Serial2.begin(57600, SERIAL_8N1, RX, TX);
   initialize_radio();
   Serial2.print("sys get hwei\r\n");
   Serial.println(Serial2.readStringUntil('\n'));
 
+}
+
+uint32_t read_groove_sensor (){
+  int sensor_groove_Value = analogRead(SIG);
+  sensor_volt=(float)sensor_groove_Value/4096*5.0;
+  RS_gas = (5.0-sensor_volt)/sensor_volt; // omit *RL
+  ratio = (RS_gas/R0);  // ratio = RS/R0
+  /*-----------------------------------------------------------------------*/
+  delay(1000);
+  uint32_t data=ratio*100;
+
+  return data;
+
+}
+
+uint32_t read_aime_sensor (){
+  int sensor_aime_Value = analogRead(ADC_SENS);
+  sensor_volt=(float)sensor_aime_Value/4096*5.0;
+  /*float v_sens = sensor_aime_Value/(10^7);
+  float i_sens= v_sens */
+
+  float R_capteur=(R1*(R2+R3)*Vcc/(R2*sensor_volt)) -R1-R5;
+ 
+  return R_capteur;
+
+}
+
+uint32_t read_r_alu (){
+  int ADC_R_ALU = analogRead(ADC_R_Alu);
+  float ADC_R_ALU_volt=(float)ADC_R_Alu/4096*5.0;
+  /*float v_sens = sensor_aime_Value/(10^7);
+  float i_sens= v_sens */
+
+  float R_Alu=ADC_R_ALU_volt*R6/(3.3-ADC_R_ALU_volt);
+
+ 
+  return R_Alu;
+
+}
+void config_PWM(){
 
 
+// configure PWM functionalitites
+ledcSetup(ledChannel, freq, resolution);
 
-  //Serial.println("Serial Txd is on pin: "+String(TX));
-  //Serial.println("Serial Rxd is on pin: "+String(RX));
-  //Serial2.print("sys reset\r\n");
-  //myLora.tx("s");
+// attach the channel to the GPIO to be controlled
+ledcAttachPin(ledPin, ledChannel);
 
-payload[0]=highByte(humidity); //4 bits par 
-payload[1]=lowByte(humidity);
-payload[2]=highByte(temperature);
-payload[3]=lowByte(temperature);
-// Send it off
+}
 
+float temperature (){
+  float T = a*(read_r_alu()) + b;
+  return T;
+}
+int manage_PID(){
+ 
+  int t_2 = micros();
+  e_t = 200 - temperature();
+  float e_P = Kp * e_t;
+  float e_I = Ki * e_t * delta_t; 
+  float e_D = Kd * (e_t - e_t_1) / (delta_t);
+  t_2 = t_2;
+  e_t_1 = e_t;
+  uint8_t C = e_P + e_D + e_I;
+  if(C > 255) C = 255;
+ 
+  return C;
+}
+
+void Cmd_PWM_Poly(){
+int duty_cycle=manage_PID();
+ledcWrite(ledChannel,duty_cyle)
 
 }
 
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  if (Serial2.available()) {
-    Serial.println(Serial2.readStringUntil('\n'));
-  }
 
- /* delay(1000);
-  Serial2.print("mac pause\r\n");
-  Serial.println(Serial2.readStringUntil('\n'));
-  delay(1000);
+  groove_data=read_groove_sensor();
+  aime_data=read_aime_sensor();
 
-  //Serial2.print("mac get devaddr\r\n");
-  Serial2.print("radio rx 0\r\n");
-  String str=Serial2.readStringUntil('\n');
-  Serial.println(str);
-  
-*/
 
   Serial.println("TXing");
+  Serial.println(ratio);
   delay(1000);
 
-  myLora.txBytes(payload,4); //one byte, blocking function
-  delay(1000);
-  
+  payload[0]=highByte(gas_data);  
+  payload[1]=lowByte(gas_data);
+
+  myLora.txBytes(payload,2); //one byte, blocking function
+ 
+
 }
