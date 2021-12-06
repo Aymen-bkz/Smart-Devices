@@ -10,7 +10,12 @@
 rn2xx3 lora(Serial2);
 uint32_t humidity = 7625;//à diviser par 100
 uint32_t temperature = 3215;//à diviser par 100
-byte payload[4];
+byte payload[2];
+float const R0 = 0.22;
+float sensor_volt;
+float RS_gas; // Get value of RS in a GAS
+float ratio; // Get ratio RS_GAS/RS_air
+int sensorValue; // omit *RL
 
 void initialize_radio()
 {
@@ -62,7 +67,9 @@ void initialize_radio()
 
 void setup() {
   // put your setup code here, to run once:
+ 
   Serial.begin(9600);
+  
   Serial2.begin(57600, SERIAL_8N1, RXD2, TXD2);
   initialize_radio();
   Serial.println(Serial2.readStringUntil('\n'));
@@ -71,11 +78,6 @@ void setup() {
   Serial2.print("mac pause\r\n");
   Serial.println(Serial2.readStringUntil('\n'));
   
-  payload[0]=highByte(humidity);
-  payload[1]=lowByte(humidity);
-  payload[2]=highByte(temperature);
-  payload[3]=lowByte(temperature);
-  // Send it off
   
   
 }
@@ -83,20 +85,32 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   
-  //Serial2.print("radio tx 48656c6c6f\r\n");
- // Serial.println(Serial2.readStringUntil('\n'));
- /* if (Serial.available()) {                        // if data is available on hardware serial port ==> data is coming from PC or notebook
-       //SoftSerial.print("$PMTK104*37\r\n");              // write it to the SoftSerial shield
+  
+  //Serial.println(Serial2.readStringUntil('\n'));
+  if (Serial.available()) {                        // if data is available on hardware serial port ==> data is coming from PC or notebook
+                    
        String Command = Serial.readStringUntil('\n');
        Serial.println(Command);
        Serial2.print(Command + "\r\n");
   }
   delay(1000);
-  lora.txBytes(payload,4); 
-  */ 
-  float sensorvalue;
-  sensorvalue = analogRead(gas_pin);
-  Serial.print("sensor_value = ");
-  Serial.println(sensorvalue);
-  delay(300);
+    sensorValue = analogRead(gas_pin);
+    sensor_volt=(float)sensorValue/4096*5.0;
+    RS_gas = (5.0-sensor_volt)/sensor_volt;
+    ratio = RS_gas/R0; 
+    Serial.print("sensor_volt = ");
+    Serial.println(sensor_volt);
+    Serial.print("RS_ratio = ");
+    Serial.println(RS_gas);
+    Serial.print("Rs/R0 = ");
+    Serial.println(ratio);
+    Serial.print("\n\n");
+
+    int ratio_hex = ratio*100;
+    payload[0]=highByte(ratio_hex);
+    payload[1]=lowByte(ratio_hex);
+    
+    lora.txBytes(payload,2); 
+   
+     delay(2000);
 }
