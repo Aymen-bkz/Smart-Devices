@@ -78,7 +78,9 @@ void initialize_radio() //Initialization du module LORA
   Serial.println("Successfully joined TTN");
   }
 
-void manage_interrupt(){
+void manage_interrupt() //gestion de l'interruption du capteur
+{
+  digitalWrite(Buzz_pin, 1); //active l'alarme a la detection du GAZ (interruption materielle)
 }
 
 uint32_t read_grove_sensor () //Recuperation de la donnée du capteur grove
@@ -148,6 +150,7 @@ void setup() {
   initialize_radio(); //initialiation de la radio
   Serial2.print("sys get hwei\r\n"); // recuperation du HWEUI
   Serial.println(Serial2.readStringUntil('\n'));
+  attachInterrupt(INTERRUPT_PIN, manage_interrupt, LOW); //Appel de la fonction d'inerruption
   
 }
 void loop() {
